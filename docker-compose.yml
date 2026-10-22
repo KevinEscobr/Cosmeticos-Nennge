@@ -1,0 +1,50 @@
+services:
+  # 1. El motor PHP personalizado con las extensiones de Laravel (PHP 8.3.36 parcheado y seguro)
+  cosmeticos-php:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    container_name: cosmeticos-backend-php
+    restart: unless-stopped
+    volumes:
+      - .:/var/www/html
+      - ./docker/php/local.ini:/usr/local/etc/php/conf.d/local.ini
+    depends_on:
+      - cosmeticos-db
+    networks:
+      - proxy-public-network
+
+  # 2. El servidor Nginx para archivos estáticos y enrutamiento seguro
+  cosmeticos-nginx:
+    image: 'nginx:alpine'
+    container_name: cosmeticos-backend-nginx
+    restart: unless-stopped
+    volumes:
+      - .:/var/www/html
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - cosmeticos-php
+    networks:
+      - proxy-public-network
+
+  # 3. El motor de Base de Datos MySQL
+  cosmeticos-db:
+    image: 'mysql:8.0'
+    container_name: cosmeticos-backend-db
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: cosmeticos_db
+      MYSQL_USER: cosmeticos_user
+      MYSQL_PASSWORD: cosmeticos_secret_password
+      MYSQL_ROOT_PASSWORD: root_password_segura
+    volumes:
+      - cosmeticos-db-data:/var/lib/mysql
+    networks:
+      - proxy-public-network
+
+networks:
+  proxy-public-network:
+    external: true
+
+volumes:
+  cosmeticos-db-data:
